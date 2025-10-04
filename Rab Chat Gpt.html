@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Penghitung RAB - Blogspot (localStorage)</title>
+  <style>
+    :root{--bg:#f7fafc;--card:#ffffff;--muted:#6b7280;--accent:#0ea5a4}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    body{background:var(--bg);padding:18px;box-sizing:border-box}
+    .wrap{max-width:980px;margin:0 auto}
+    header{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+    h1{font-size:18px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(12,12,16,0.06);margin-bottom:12px}
+    form.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:end}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    input,select{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee;font-size:14px}
+    button{padding:9px 12px;border-radius:8px;border:0;background:var(--accent);color:white;font-weight:600;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;border-bottom:1px solid #eef2f6;text-align:left;font-size:13px}
+    th{background:#f8fafb;color:#374151;font-weight:700}
+    .right{text-align:right}
+    .muted{color:var(--muted)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .small{font-size:12px;padding:6px 8px}
+    .totals{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+    @media (max-width:520px){header{flex-direction:column;align-items:flex-start}form.grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Buat Anggaran Proyek (RAB)</h1>
+        <p class="lead">Hitung Anggaran Proyek Bangunan Mu.Dengan Profit Yang sesuai.Atur Harga Penawaran mu. Dapatkan Tender Impianmu. </p>
+      </div>
+    </header>
+
+    <section class="card" aria-label="Input item">
+      <form id="itemForm" class="grid" onsubmit="return false;">
+        <div>
+          <label for="itemName">Pekerjaan / Material</label>
+          <input id="itemName" placeholder="Contoh: Pasang keramik" required />
+        </div>
+        <div>
+          <label for="unit">Satuan</label>
+          <input id="unit" placeholder="m2, m3, batang, pcs" />
+        </div>
+        <div>
+          <label for="volume">Volume</label>
+          <input id="volume" type="number" step="0.001" min="0" value="0" />
+        </div>
+        <div>
+          <label for="price">Harga Satuan (Rp)</label>
+          <input id="price" type="number" step="1" min="0" value="0" />
+        </div>
+        <div style="grid-column:1/-1;display:flex;gap:8px">
+          <button id="addBtn">Tambah Item</button>
+          <button id="clearForm" type="button" class="small">Bersihkan</button>
+          <button id="importJson" type="button" class="small">Impor JSON</button>
+          <button id="exportJson" type="button" class="small">Ekspor JSON</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>Daftar Item</strong>
+        <div class="actions">
+          <button id="loadSample" type="button" class="small">Contoh</button>
+          <button id="clearAll" type="button" class="small">Hapus Semua</button>
+        </div>
+      </div>
+
+      <div id="tableWrap">
+        <table id="itemsTable" aria-label="Tabel item">
+          <thead>
+            <tr><th>Item</th><th>Satuan</th><th class="right">Vol</th><th class="right">Harga Satuan</th><th class="right">Subtotal</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="totals">
+        <div style="display:flex;justify-content:space-between"><span>Jumlah Material</span><strong id="sumMaterial">Rp 0</strong></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="min-width:140px">Persen Upah / Overhead</label>
+          <input id="percentOH" type="number" step="0.1" min="0" value="10" style="width:90px" />
+          <div style="flex:1;display:flex;justify-content:flex-end"><strong id="valueOH">Rp 0</strong></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="min-width:140px">Profit (%)</label>
+          <input id="percentProfit" type="number" step="0.1" min="0" value="5" style="width:90px" />
+          <div style="flex:1;display:flex;justify-content:flex-end"><strong id="valueProfit">Rp 0</strong></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="min-width:140px">Pajak (%)</label>
+          <input id="percentTax" type="number" step="0.1" min="0" value="10" style="width:90px" />
+          <div style="flex:1;display:flex;justify-content:flex-end"><strong id="valueTax">Rp 0</strong></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;padding-top:6px">
+          <span>Total RAB</span>
+          <strong id="grandTotal">Rp 0</strong>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button id="printBtn" class="small">Cetak</button>
+        <button id="downloadCsv" class="small">Download CSV</button>
+        <button id="shareJson" class="small">Salin JSON</button>
+      </div>
+    </section>
+
+    <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:8px">Hak Cipta @B-MEN.28.09.25</footer>
+  </div>
+
+<script>
+// Utilities: format currency and safe numeric math
+function toNumber(v){
+  const n = Number(String(v).replace(/[^0-9.-]+/g,''));
+  return Number.isFinite(n) ? n : 0;
+}
+function formatIDR(v){
+  return 'Rp ' + Math.round(v).toLocaleString('id-ID');
+}
+
+// App state
+const LS_KEY = 'rab_items_v1';
+let items = [];
+
+// Elements
+const itemName = document.getElementById('itemName');
+const unit = document.getElementById('unit');
+const volume = document.getElementById('volume');
+const price = document.getElementById('price');
+const addBtn = document.getElementById('addBtn');
+const itemsTable = document.querySelector('#itemsTable tbody');
+const sumMaterialEl = document.getElementById('sumMaterial');
+const percentOH = document.getElementById('percentOH');
+const percentProfit = document.getElementById('percentProfit');
+const percentTax = document.getElementById('percentTax');
+const valueOH = document.getElementById('valueOH');
+const valueProfit = document.getElementById('valueProfit');
+const valueTax = document.getElementById('valueTax');
+const grandTotalEl = document.getElementById('grandTotal');
+const clearAll = document.getElementById('clearAll');
+const loadSample = document.getElementById('loadSample');
+const clearForm = document.getElementById('clearForm');
+const exportJson = document.getElementById('exportJson');
+const importJson = document.getElementById('importJson');
+const printBtn = document.getElementById('printBtn');
+const downloadCsv = document.getElementById('downloadCsv');
+const shareJson = document.getElementById('shareJson');
+
+// Load from localStorage
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    items = raw ? JSON.parse(raw) : [];
+  }catch(e){items=[]}
+  render();
+}
+function save(){
+  localStorage.setItem(LS_KEY, JSON.stringify(items));
+}
+
+function addItem(){
+  const name = itemName.value.trim();
+  if(!name) return alert('Isi nama item');
+  const u = unit.value.trim() || '-';
+  const vol = toNumber(volume.value);
+  const pr = toNumber(price.value);
+  const subtotal = Math.round(vol * pr);
+  items.push({id:Date.now()+Math.random(),name:u?name:name,unit:u,volume:vol,price:pr,subtotal});
+  save(); render();
+  clearInputs();
+}
+function clearInputs(){itemName.value='';unit.value='';volume.value='0';price.value='0';itemName.focus();}
+
+function render(){
+  // table
+  itemsTable.innerHTML = '';
+  let sum=0;
+  for(const it of items){
+    sum += toNumber(it.subtotal);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(it.name)}</td><td>${escapeHtml(it.unit)}</td><td class="right">${it.volume}</td><td class="right">${formatIDR(it.price)}</td><td class="right">${formatIDR(it.subtotal)}</td><td><button data-id="${it.id}" class="small">Hapus</button></td>`;
+    itemsTable.appendChild(tr);
+  }
+  sumMaterialEl.textContent = formatIDR(sum);
+  // calculations
+  const oh = Math.round(sum * (toNumber(percentOH.value)/100));
+  const profit = Math.round(sum * (toNumber(percentProfit.value)/100));
+  const tax = Math.round((sum + oh + profit) * (toNumber(percentTax.value)/100));
+  valueOH.textContent = formatIDR(oh);
+  valueProfit.textContent = formatIDR(profit);
+  valueTax.textContent = formatIDR(tax);
+  const grand = sum + oh + profit + tax;
+  grandTotalEl.textContent = formatIDR(grand);
+}
+
+// Event delegation for delete
+itemsTable.addEventListener('click', e=>{
+  if(e.target.tagName === 'BUTTON'){
+    const id = e.target.dataset.id;
+    items = items.filter(x=>String(x.id)!==String(id)); save(); render();
+  }
+});
+
+addBtn.addEventListener('click', addItem);
+clearForm.addEventListener('click', clearInputs);
+
+percentOH.addEventListener('input', render);
+percentProfit.addEventListener('input', render);
+percentTax.addEventListener('input', render);
+
+clearAll.addEventListener('click', ()=>{if(confirm('Hapus semua item?')){items=[];save();render();}});
+
+loadSample.addEventListener('click', ()=>{
+  items = [
+    {id:1,name:'Galian tanah',unit:'m3',volume:10,price:75000,subtotal:750000},
+    {id:2,name:'Pasang pondasi',unit:'m3',volume:5,price:250000,subtotal:1250000},
+    {id:3,name:'Upah tukang',unit:'hari',volume:30,price:150000,subtotal:4500000}
+  ]; save(); render();
+});
+
+exportJson.addEventListener('click', ()=>{
+  const data = JSON.stringify({items,meta:{updated:new Date().toISOString()}},null,2);
+  const blob = new Blob([data],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='rab_export.json'; a.click(); URL.revokeObjectURL(url);
+});
+
+importJson.addEventListener('click', ()=>{
+  const txt = prompt('Tempel JSON data items disini');
+  if(!txt) return;
+  try{
+    const parsed = JSON.parse(txt);
+    if(Array.isArray(parsed)) items = parsed; else if(parsed.items) items = parsed.items; else throw 0;
+    save(); render();
+    alert('Impor selesai');
+  }catch(e){alert('JSON tidak valid')}
+});
+
+printBtn.addEventListener('click', ()=>{
+  const w = window.open('','_blank');
+  const html = buildPrintHtml();
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(()=>w.print(),200);
+});
+
+downloadCsv.addEventListener('click', ()=>{
+  const rows = [['Item','Satuan','Volume','Harga Satuan','Subtotal']];
+  for(const it of items) rows.push([it.name,it.unit,it.volume,it.price,it.subtotal]);
+  const csv = rows.map(r=>r.map(cell=>`"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='rab.csv'; a.click(); URL.revokeObjectURL(url);
+});
+
+shareJson.addEventListener('click', ()=>{navigator.clipboard.writeText(JSON.stringify({items},null,2)).then(()=>alert('JSON disalin ke clipboard'))});
+
+// Helpers
+function escapeHtml(s){return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));}
+
+function buildPrintHtml(){
+  const rows = items.map(it=>`<tr><td>${escapeHtml(it.name)}</td><td>${escapeHtml(it.unit)}</td><td style="text-align:right">${it.volume}</td><td style="text-align:right">${formatIDR(it.price)}</td><td style="text-align:right">${formatIDR(it.subtotal)}</td></tr>`).join('');
+  const sum = items.reduce((s,it)=>s+toNumber(it.subtotal),0);
+  const oh = Math.round(sum * (toNumber(percentOH.value)/100));
+  const profit = Math.round(sum * (toNumber(percentProfit.value)/100));
+  const tax = Math.round((sum+oh+profit)*(toNumber(percentTax.value)/100));
+  const grand = sum+oh+profit+tax;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Print RAB</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left}th{background:#f4f4f4}</style></head><body><h2>Rekap RAB</h2><table><thead><tr><th>Item</th><th>Satuan</th><th style="text-align:right">Vol</th><th style="text-align:right">Harga</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${rows}</tbody></table><hr><table style="width:100%"><tr><td>Jumlah Material</td><td style="text-align:right">${formatIDR(sum)}</td></tr><tr><td>Overhead (${percentOH.value}%)</td><td style="text-align:right">${formatIDR(oh)}</td></tr><tr><td>Profit (${percentProfit.value}%)</td><td style="text-align:right">${formatIDR(profit)}</td></tr><tr><td>Pajak (${percentTax.value}%)</td><td style="text-align:right">${formatIDR(tax)}</td></tr><tr><th>Total RAB</th><th style="text-align:right">${formatIDR(grand)}</th></tr></table></body></html>`;
+}
+
+function init(){
+  load();
+  // autosave on unload
+  window.addEventListener('beforeunload', save);
+}
+init();
+</script>
+</body>
+</html>
